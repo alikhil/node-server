@@ -1,16 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta contentType="text/html; charset=UTF-8"/>
     <title>Search</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-    <script src="/bundle.js"></script>
-    <script src="/public/js/bootstrap.min.js"></script>
-    <link href="/public/css/bootstrap.min.css" rel="stylesheet">
+    <script src="/sttp.js"></script>
+    <script src="/base64/base64.js"></script>
+    <script src="/public/js/sttp_client.js"></script>
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+    <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/public/css/style.css" rel="stylesheet">
 
     <script>
         $(document).ready(function () {
-
+            client.handshake();
+            $("#link").click(function (event) {
+                var text = $("#query").val();
+                var post = $("#post_used").is(":checked");
+                var method = post ? "POST" : "GET";
+                client.makeRequest(method, "/search", {search_query: text})
+                    .then((result) => {
+                        getSuccess(result);
+                    });
+            });
         });
         function getSuccess(data, status) {
             if (data) {
@@ -46,8 +58,8 @@
         <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2">
             <div class="col-lg-offset-2 ">
                 <label>
-                    <input type="checkbox" id="sttp_used"> 
-                    Use STTP
+                    <input type="checkbox" id="post_used"> 
+                    Use POST(defaut is GET)
                 </label>
             </div>
         </div>
