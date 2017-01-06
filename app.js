@@ -17,7 +17,6 @@ app.get("/sttp.js", function(req, res) {
 	res.sendFile(__dirname + "/node_modules/sttp/bundle.sttp.js");
 });
 
-app.use("/base64", express.static(__dirname + "/node_modules/js-base64/"));
 app.use("/bootstrap", express.static(__dirname + "/node_modules/bootstrap/dist/"));
 app.use("/public", express.static(__dirname + "/public/"));
 
