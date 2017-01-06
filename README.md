@@ -1,29 +1,40 @@
-# Example of using [sttp](http://github.com/alikhil/sttp) protocol
+# Example of using [sttp](http://github.com/alikhil/sttp) protocol with [express.js](https://expressjs.com/)
 
-### Tutorial
+### Example
 
 
 ```js
-var DataPacker = require("sttp").DataPacker;
+const sttp_server = require("./sttp-server");
 
-var data = { name: "Sergey", univeristy: "Innopolis University" };
-var packer = new DataPacker(aesKey);
+// express `app` initialization here
 
-var pack = packer.pack(data);
-
-// transfer using some channel
-// init packer on the same way using the same aesKey(use AuthDataPacker to send aesKey)
-
-var unpackedData = packer.unpack(pack);
+sttp_server.setupGetRSAForRequest((req) => {
+    // method for marching corresponding RSA key for request
+	let ip = getIP(req);
+	if (ipToRSA[ip] === undefined) {
+		ipToRSA[ip] = sttp.keys.generateRSAKey();
+	}
+	return ipToRSA[ip];
+}).setupSetAESForRequest((req, aes) => {
+    // method for setting AES key to corresponding request
+	let ip = getIP(req);
+	ipToAES[ip] = aes;	
+}).setupGetAESForRequest((req) => {
+    // method for marching corresponding AES key for request
+	let ip = getIP(req);
+	return ipToAES[ip];
+}).setupApp(app);
 
 ```
 
-[Read more](http://github.com/alikhil/sttp).
+Look into `sttp-server.js` and `sttp_client.js` files and their usage in `app.js` and `index.html`.
+
+More STTP documentation [here](http://github.com/alikhil/sttp).
 
 ### Quick start
 ```sh
-git clone https://github.com/jeaced/node-server/
-cd node-server
+git clone https://github.com/alikhil/sttp-example/
+cd sttp-example
 npm install
-node .
+node app.js
 ```
