@@ -1,35 +1,76 @@
-var express = require("express");
-var app = express();
-var searching = require("searching");
-var browserify = require("browserify");
-var DataPacker = require("sttp").DataPacker;
+"use strict";
 
-app.get("/bundle.js", function(req, res) {
-    res.setHeader('content-type', 'application/javascript');
-    var b = browserify(__dirname + '/webapps/js/script.js').bundle();
-    b.on('error', console.error);
-    b.pipe(res);
+const fs = require("fs");
+const express = require("express");
+const app = express();
+const sttp = require("sttp");
+const readline = require('readline');
+
+const sttp_server = require("./sttp-server");
+const bodyParser = require("body-parser");
+
+let ipToRSA = {};
+let ipToAES = {};
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.get("/sttp.js", function(req, res) {
+	res.sendFile(__dirname + "/node_modules/sttp/bundle.sttp.js");
 });
 
-app.use("/public", express.static(__dirname + "/webapps"));
+app.use("/base64", express.static(__dirname + "/node_modules/js-base64/"));
+app.use("/bootstrap", express.static(__dirname + "/node_modules/bootstrap/dist/"));
+app.use("/public", express.static(__dirname + "/public/"));
 
 app.get("/", function (req, res) {
-	res.sendfile("webapps/view/index.html")
+	res.sendFile(__dirname + "/public/index.html");
 });
 
-var aesKey = "0000111144442222";
+function getIP(req) {
+	return req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+}
 
-app.get("/search", function (req, res) {
-	var query = req.query["search_query"];
-	var sttpUsed = req.query["sttp_used"] == "true";
+// setup STTP middleware
 
-	var data = searching.word(query, 250, "data.txt", "./", function(data) {
-		if (sttpUsed) {
-			var packer = new DataPacker(aesKey);
-			data = packer.pack(data);
-		}
-		res.send(data);
+sttp_server.setupGetRSAForRequest((req) => {
+	let ip = getIP(req);
+	if (ipToRSA[ip] === undefined) {
+		ipToRSA[ip] = sttp.keys.generateRSAKey();
+	}
+	return ipToRSA[ip];
+}).setupSetAESForRequest((req, aes) => {
+	let ip = getIP(req);
+	ipToAES[ip] = aes;	
+}).setupGetAESForRequest((req) => {
+	let ip = getIP(req);
+	return ipToAES[ip];
+}).setupApp(app);
+
+     
+app.use("/search", function (req, res) {
+
+	let query = req.decrypted.search_query; // instead of req.query.search_query || req.body.search_query;
+
+	const rl = readline.createInterface({
+		input: fs.createReadStream("data.txt")
 	});
+ 
+	let results = ["used:" + req.method];
+
+	rl.on("line", function (line) {
+		if (line.indexOf(query) >= 0) {
+			results.push(line);
+		}
+	});
+	rl.on("close", () => {
+		if (results.length === 1) {
+			results = ["Nothing found or some shit happen"];
+		}
+		// encrypt sending data
+		let resToSend = req.prepare(results);
+			
+		res.send({data:resToSend});
+	});
+	
 });
 
 
